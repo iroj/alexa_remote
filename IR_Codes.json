@@ -1,0 +1,18 @@
+[
+  {
+    "protocol": "SONY",
+    "address": "0x10",
+    "command": "0x69",
+    "raw-data": "0x869",
+    "decoded-raw-data": 2153,
+    "remote-key":"MD"
+  },
+  {
+    "protocol": "SONY",
+    "address": "0x10",
+    "command": "0x25",
+    "raw-Data": "0x825",
+    "decoded-raw-data": 2085,
+    "remote-key":"CD"
+  }
+]
