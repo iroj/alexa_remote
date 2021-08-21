@@ -5,7 +5,8 @@
     "command": "0x69",
     "raw-data": "0x869",
     "decoded-raw-data": 2153,
-    "remote-key":"MD"
+    "remote-key":"MD",
+    "alias":"TV"
   },
   {
     "protocol": "SONY",
@@ -13,6 +14,7 @@
     "command": "0x25",
     "raw-Data": "0x825",
     "decoded-raw-data": 2085,
-    "remote-key":"CD"
+    "remote-key":"CD",
+    "alias":"Alexa"
   }
 ]
