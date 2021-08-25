@@ -75,7 +75,7 @@ void alexaOn(){
 
 void tvOn(){
 
-  IrSender.sendSony(sAddress, tvCommand, 3);
+  IrSender.sendSony(sAddress, tvCommand, 0);
 // IrSender.sendNEC(tvModeAddress, tvModeCommand, 0);
   Serial.println("ALEXA OFF, TV ON");
 }
