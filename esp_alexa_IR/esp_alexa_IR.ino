@@ -1,8 +1,10 @@
 
 #include <ESP8266WiFi.h>
-#include <IRremote.h>
-
 #include <fauxmoESP.h>
+#include <IRremoteESP8266.h>
+#include <IRsend.h>
+#include <IRrecv.h>
+#include <IRutils.h>
 #include "credentials.h"
 
 bool toggle = false;
@@ -17,12 +19,12 @@ fauxmoESP fauxmo;
 #define STATUS_LED_PIN 4
 #define TV "TV audio"
 
-uint16_t sAddress = 0x10;
-uint8_t tvCommand = 0x69;
-uint8_t alexaCommand = 0x25;
+IRsend irsend(IR_SEND_PIN);
+IRrecv irrecv(IR_RECEIVE_PIN);
+decode_results results;  
 
-// uint16_t tvModeAddress = 0x4;
-// uint8_t tvModeCommand = 0x2F;
+// uint8_t tvCode = 0x52;
+// uint8_t alexaCode = 0x4B;
 
 void wifiSetup() {
 
@@ -39,12 +41,11 @@ void wifiSetup() {
 }
 
 void irSetup(){
-  IrSender.begin(IR_SEND_PIN, ENABLE_LED_FEEDBACK);  
+  irsend.begin();  
 }
 
 void irReceiverSetup(){
-  IrReceiver.enableIRIn();
-  IrReceiver.begin(IR_RECEIVE_PIN);
+  irrecv.enableIRIn();  
 }
 
 void irStatusLEDSetup(){
@@ -54,29 +55,34 @@ void irStatusLEDSetup(){
 
 void irReceiverLoop(){
 
-  if (IrReceiver.decode()) {
-    IrReceiver.printIRResultShort(&Serial);
-    if (IrReceiver.decodedIRData.protocol == sony ){
-      if(IrReceiver.decodedIRData.decodedRawData == 2085) {
-        digitalWrite(STATUS_LED_PIN, HIGH);
-      }
-      if(IrReceiver.decodedIRData.decodedRawData == 2153) {
-        digitalWrite(STATUS_LED_PIN, LOW);
-      }
-    } 
-    IrReceiver.resume();
+   if (irrecv.decode(&results)) {
+    // serialPrintUint64(results.value, HEX);
+    Serial.println("");
+     Serial.print(resultToHumanReadableBasic(&results));
+
+      // if(results.value == alexaCode) {
+      //   digitalWrite(STATUS_LED_PIN, HIGH);
+      // }
+      // if(results.value == tvCode) {
+      //   digitalWrite(STATUS_LED_PIN, LOW);
+      // }
+
+    irrecv.resume();  
+
   }
 }
 
 void alexaOn(){
-  IrSender.sendSony(sAddress, alexaCommand, 0);
+  irsend.sendSony(0x4B, 12, 0);
+  //  IrSender.sendRaw_P(alexaRawSignal, sizeof(alexaRawSignal) / sizeof(alexaRawSignal[0]), 40);
+
   Serial.println("ALEXA ON, TV OFF");
 }
 
 void tvOn(){
+  irsend.sendSony(0x52, 12, 0);  
+  //  IrSender.sendRaw_P(tvRawSignal, sizeof(tvRawSignal) / sizeof(tvRawSignal[0]), 40);
 
-  IrSender.sendSony(sAddress, tvCommand, 3);
-// IrSender.sendNEC(tvModeAddress, tvModeCommand, 0);
   Serial.println("ALEXA OFF, TV ON");
 }
 
@@ -112,6 +118,7 @@ void setup() {
   Serial.println();
 
   fauxmoSetup();
+
 }
 
 void loop() {

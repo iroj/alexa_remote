@@ -1,20 +1,22 @@
 [
   {
     "protocol": "SONY",
-    "address": "0x10",
-    "command": "0x69",
-    "raw-data": "0x869",
-    "decoded-raw-data": 2153,
-    "remote-key":"MD",
-    "alias":"TV"
+    "raw-decoded-data": "0x2FB2AB17",
+    "remote-key": "MD",
+    "alias": "TV",
+    "raw": [
+      2422, 564, 1226, 566, 604, 590, 604, 592, 1200, 590, 604, 566, 1226, 566,
+      1200, 590, 604, 590, 604, 566, 628, 566, 632, 562, 1202
+    ]
   },
   {
     "protocol": "SONY",
-    "address": "0x10",
-    "command": "0x25",
-    "raw-Data": "0x825",
-    "decoded-raw-data": 2085,
-    "remote-key":"CD",
-    "alias":"Alexa"
+    "raw-decoded-data": "0xE31701F",
+    "remote-key": "CD",
+    "alias": "Alexa",
+    "raw": [
+      2422, 564, 1226, 566, 602, 592, 1200, 590, 604, 590, 604, 566, 1226, 566,
+      602, 592, 604, 590, 604, 590, 604, 566, 628, 566, 1200
+    ]
   }
 ]
