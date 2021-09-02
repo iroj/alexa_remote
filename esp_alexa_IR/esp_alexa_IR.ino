@@ -5,7 +5,11 @@
 
 #include <fauxmoESP.h>
 #include "credentials.h"
-
+typedef struct DEVICE
+{
+  char *name;
+  uint8_t id;
+};
 bool toggle = false;
 
 #define DELAY_AFTER_SEND 2000
@@ -15,20 +19,31 @@ bool toggle = false;
 
 #define IR_SEND_PIN 12
 
-#define TV "TV audio"
+constexpr DEVICE TVAUDIO{"TV audio", 0};
+constexpr DEVICE TVINPUT{"TV input", 1};
+constexpr DEVICE TVPOWER{"TV power", 2};
 
 IRsend irsend(IR_SEND_PIN);
 fauxmoESP fauxmo;
 
-uint16_t tvCommand = 0x961;
-uint16_t alexaCommand = 0xa41;
+uint16_t tvAudioCommand = 0x961;
+uint16_t alexaAudioCommand = 0xa41;
+uint64_t tvPowerCommand = 0x20DF10EF;
 
-uint16_t repeats = 2;
-uint16_t bits = 12;
 
-// uint16_t tvModeAddress = 0x4;
-// uint8_t tvModeCommand = 0x2F;
+uint16_t sonyrepeats = 2;
+uint16_t sonybits = 12;
+uint16_t necbits = 32;
+
 uint8_t mode = 0;
+
+void deviceSetup(DEVICE device)
+{
+  fauxmo.addDevice(device.name);
+  device.id = fauxmo.getDeviceId(device.name);
+  Serial.println();
+  Serial.printf("[DEVICE SETUP] %s ID: %d", device.name, device.id);
+}
 
 void wifiSetup()
 {
@@ -51,43 +66,63 @@ void irSetup()
   irsend.begin();
 }
 
-void alexaOn()
+void alexaAudioOn()
 {
-  irsend.sendSony(alexaCommand, bits, repeats);
+  irsend.sendSony(alexaAudioCommand, sonybits, sonyrepeats);
   delay(DELAY_AFTER_SEND);
-  Serial.println("ALEXA ON, TV OFF");
+  Serial.println();
+  Serial.println("[RESULT] ALEXA ON, TV OFF");
 }
 
-void tvOn()
+void tvAudioOn()
 {
-  irsend.sendSony(tvCommand, bits, repeats);
+  irsend.sendSony(tvAudioCommand, sonybits, sonyrepeats);
   delay(DELAY_AFTER_SEND);
-  Serial.println("ALEXA OFF, TV ON");
+
+  Serial.println();
+  Serial.println("[RESULT] ALEXA OFF, TV ON");
 }
 
 void fauxmoSetup()
 {
-  fauxmo.addDevice(TV);
+  deviceSetup(TVAUDIO);
+  deviceSetup(TVINPUT);
+  deviceSetup(TVPOWER);
+
   fauxmo.setPort(80);
   fauxmo.enable(true);
 
   fauxmo.onSetState([](unsigned char device_id, const char *device_name, bool state, unsigned char value)
                     {
+                      Serial.println();
+                      Serial.println();
                       Serial.printf("[MAIN] Device #%d (%s) state: %s value: %d\n", device_id, device_name, state ? "ON" : "OFF", value);
-                      if (strcmp(device_name, TV) == 0)
+                      switch (device_id)
                       {
-                        if (state)
-                        {
-
-                          mode = 1;
-                        }
-                        else
-                        {
-
-                          mode = 2;
-                        }
+                      case TVAUDIO.id:
+                        handleTvAudio(state);
+                        break;
+                      case TVPOWER.id:
+                        mode = 3;
+                         break;
+                      default:
+                        break;
                       }
                     });
+}
+
+void handleTvAudio(bool state)
+{
+  if (state)
+  {
+
+    mode = 1;
+  }
+  else
+  {
+
+    mode = 2;
+  }
 }
 
 void sendIR()
@@ -95,10 +130,13 @@ void sendIR()
   switch (mode)
   {
   case 1:
-    tvOn();
+    tvAudioOn();
     break;
   case 2:
-    alexaOn();
+    alexaAudioOn();
+    break;
+  case 3:
+    irsend.sendNEC(tvPowerCommand, necbits);
     break;
   default:
     break;
@@ -112,29 +150,28 @@ void setup()
   Serial.println();
   wifiSetup();
 
-  Serial.printf("[IR] IR setup");
   Serial.println();
+  Serial.printf("[IR] IR setup");
   irSetup();
 
-  Serial.printf("[FAUXMO] Fauxmo setup");
   Serial.println();
+  Serial.printf("[FAUXMO] Fauxmo setup");
 
   fauxmoSetup();
 }
 
 void loop()
 {
-  // tvOn();
-  // delay(5000);
-  // alexaOn();
   fauxmo.handle();
   static unsigned long last = millis();
   if (millis() - last > 500)
   {
     last = millis();
     ESP.getFreeHeap();
-    if(mode!=0){
-      Serial.println(mode);
+    if (mode != 0)
+    {
+      Serial.println();
+      Serial.printf("[MODE] %d", mode);
       sendIR();
     }
   }

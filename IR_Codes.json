@@ -1,20 +1,26 @@
 [
   {
     "protocol": "SONY",
-    "address": "0x10",
-    "command": "0x961",
-    "raw-data": "0x869",
-    "decoded-raw-data": 2153,
+    "address": "0x0",
+    "command": "0x0",
+    "raw-data": "0x961",
     "remote-key":"MD",
-    "alias":"TV"
+    "alexa Command":"TV audio ON"
   },
   {
     "protocol": "SONY",
-    "address": "0x10",
-    "command": "0xa41",
-    "raw-Data": "0x825",
-    "decoded-raw-data": 2085,
+    "address": "0x0",
+    "command": "0x0",
+    "raw-Data": "0xa41",
     "remote-key":"CD",
-    "alias":"Alexa"
+    "alias":"TV audio OFF"
+  },
+  {
+    "protocol": "NEC",
+    "address": "0x0",
+    "command": "0x0",
+    "raw-Data": "0x20DF10EF",
+    "remote-key":"power",
+    "alias":"TV Power ON/OFF"
   }
 ]
