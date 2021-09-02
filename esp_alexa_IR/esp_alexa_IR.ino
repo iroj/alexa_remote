@@ -1,36 +1,44 @@
 
 #include <ESP8266WiFi.h>
-#include <IRremote.h>
+#include <IRremoteESP8266.h>
+#include <IRsend.h>
 
 #include <fauxmoESP.h>
 #include "credentials.h"
 
 bool toggle = false;
-decode_type_t sony = SONY;
 
-fauxmoESP fauxmo;
+#define DELAY_AFTER_SEND 2000
+#define DELAY_BETWEEN_REPEATS 26
 
 #define SERIAL_BAUDRATE 115200
 
 #define IR_SEND_PIN 12
-#define IR_RECEIVE_PIN 14
-#define STATUS_LED_PIN 4
+
 #define TV "TV audio"
 
-uint16_t sAddress = 0x10;
-uint8_t tvCommand = 0x69;
-uint8_t alexaCommand = 0x25;
+IRsend irsend(IR_SEND_PIN);
+fauxmoESP fauxmo;
+
+uint16_t tvCommand = 0x961;
+uint16_t alexaCommand = 0xa41;
+
+uint16_t repeats = 2;
+uint16_t bits = 12;
 
 // uint16_t tvModeAddress = 0x4;
 // uint8_t tvModeCommand = 0x2F;
+uint8_t mode = 0;
 
-void wifiSetup() {
+void wifiSetup()
+{
 
   WiFi.mode(WIFI_STA);
   Serial.printf("[WIFI] Connecting to %s ", WIFI_SSID);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
 
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED)
+  {
     Serial.print(".");
     delay(100);
   }
@@ -38,67 +46,68 @@ void wifiSetup() {
   Serial.printf("[WIFI] STATION Mode, SSID: %s, IP address: %s\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
 }
 
-void irSetup(){
-  IrSender.begin(IR_SEND_PIN, ENABLE_LED_FEEDBACK);  
+void irSetup()
+{
+  irsend.begin();
 }
 
-void irReceiverSetup(){
-  IrReceiver.enableIRIn();
-  IrReceiver.begin(IR_RECEIVE_PIN);
-}
-
-void irStatusLEDSetup(){
-  pinMode(STATUS_LED_PIN, OUTPUT);
-  digitalWrite(STATUS_LED_PIN, HIGH);
-}
-
-void irReceiverLoop(){
-
-  if (IrReceiver.decode()) {
-    IrReceiver.printIRResultShort(&Serial);
-    if (IrReceiver.decodedIRData.protocol == sony ){
-      if(IrReceiver.decodedIRData.decodedRawData == 2085) {
-        digitalWrite(STATUS_LED_PIN, HIGH);
-      }
-      if(IrReceiver.decodedIRData.decodedRawData == 2153) {
-        digitalWrite(STATUS_LED_PIN, LOW);
-      }
-    } 
-    IrReceiver.resume();
-  }
-}
-
-void alexaOn(){
-  IrSender.sendSony(sAddress, alexaCommand, 0);
+void alexaOn()
+{
+  irsend.sendSony(alexaCommand, bits, repeats);
+  delay(DELAY_AFTER_SEND);
   Serial.println("ALEXA ON, TV OFF");
 }
 
-void tvOn(){
-
-  IrSender.sendSony(sAddress, tvCommand, 0);
-// IrSender.sendNEC(tvModeAddress, tvModeCommand, 0);
+void tvOn()
+{
+  irsend.sendSony(tvCommand, bits, repeats);
+  delay(DELAY_AFTER_SEND);
   Serial.println("ALEXA OFF, TV ON");
 }
 
-
-void fauxmoSetup(){ 
+void fauxmoSetup()
+{
   fauxmo.addDevice(TV);
   fauxmo.setPort(80);
   fauxmo.enable(true);
 
-  fauxmo.onSetState([](unsigned char device_id, const char* device_name, bool state, unsigned char value) {
-   Serial.printf("[MAIN] Device #%d (%s) state: %s value: %d\n", device_id, device_name, state ? "ON" : "OFF", value);
-     if (strcmp(device_name, TV) == 0) {
-      if (state) {
-        tvOn();
-      }  else {
-        alexaOn();
-      }
-    }
-  });
+  fauxmo.onSetState([](unsigned char device_id, const char *device_name, bool state, unsigned char value)
+                    {
+                      Serial.printf("[MAIN] Device #%d (%s) state: %s value: %d\n", device_id, device_name, state ? "ON" : "OFF", value);
+                      if (strcmp(device_name, TV) == 0)
+                      {
+                        if (state)
+                        {
+
+                          mode = 1;
+                        }
+                        else
+                        {
+
+                          mode = 2;
+                        }
+                      }
+                    });
 }
 
-void setup() {
+void sendIR()
+{
+  switch (mode)
+  {
+  case 1:
+    tvOn();
+    break;
+  case 2:
+    alexaOn();
+    break;
+  default:
+    break;
+  }
+  mode = 0;
+}
+
+void setup()
+{
   Serial.begin(SERIAL_BAUDRATE);
   Serial.println();
   wifiSetup();
@@ -106,21 +115,27 @@ void setup() {
   Serial.printf("[IR] IR setup");
   Serial.println();
   irSetup();
-  irReceiverSetup();
-  irStatusLEDSetup();
+
   Serial.printf("[FAUXMO] Fauxmo setup");
   Serial.println();
 
   fauxmoSetup();
 }
 
-void loop() {
+void loop()
+{
+  // tvOn();
+  // delay(5000);
+  // alexaOn();
   fauxmo.handle();
-  irReceiverLoop();
-  delay(1000);
   static unsigned long last = millis();
-  if (millis() - last > 5000) {
+  if (millis() - last > 500)
+  {
     last = millis();
-    Serial.printf("[MAIN] Free heap: %d bytes\n", ESP.getFreeHeap());
+    ESP.getFreeHeap();
+    if(mode!=0){
+      Serial.println(mode);
+      sendIR();
+    }
   }
 }
