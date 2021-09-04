@@ -13,7 +13,7 @@ typedef struct DEVICE
 bool toggle = false;
 
 #define DELAY_AFTER_SEND 2000
-#define DELAY_BETWEEN_REPEATS 26
+#define DELAY_BETWEEN_REPEATS 200
 
 #define SERIAL_BAUDRATE 115200
 
@@ -29,11 +29,12 @@ fauxmoESP fauxmo;
 uint16_t tvAudioCommand = 0x961;
 uint16_t alexaAudioCommand = 0xa41;
 uint64_t tvPowerCommand = 0x20DF10EF;
-
+uint64_t tvInputCommand = 0x20DFF40B;
 
 uint16_t sonyrepeats = 2;
 uint16_t sonybits = 12;
 uint16_t necbits = 32;
+uint16_t tvinputrepeats = 1;
 
 uint8_t mode = 0;
 
@@ -78,9 +79,28 @@ void tvAudioOn()
 {
   irsend.sendSony(tvAudioCommand, sonybits, sonyrepeats);
   delay(DELAY_AFTER_SEND);
-
   Serial.println();
   Serial.println("[RESULT] ALEXA OFF, TV ON");
+}
+
+void tvToggle()
+{
+  irsend.sendNEC(tvPowerCommand, necbits);
+  delay(DELAY_AFTER_SEND);
+  Serial.println();
+  Serial.println("[RESULT] TV POWER TOGGLED");
+}
+
+void tvInputSelect()
+{
+  Serial.println();
+  Serial.printf("[RESULT] TV INPUT TOGGLED %d TIMES", tvinputrepeats);
+
+  for (int count = 1; count <= tvinputrepeats; count++)
+  {
+    irsend.sendNEC(tvInputCommand, necbits);
+      delay(DELAY_BETWEEN_REPEATS);
+  }
 }
 
 void fauxmoSetup()
@@ -100,29 +120,64 @@ void fauxmoSetup()
                       switch (device_id)
                       {
                       case TVAUDIO.id:
-                        handleTvAudio(state);
+                        if (state)
+                        {
+
+                          mode = 1;
+                        }
+                        else
+                        {
+
+                          mode = 2;
+                        }
                         break;
                       case TVPOWER.id:
-                        mode = 3;
-                         break;
+                        if (state)
+                        {
+
+                          mode = 3;
+                        }
+                        else
+                        {
+
+                          mode = 4;
+                        }
+                        break;
+                      case TVINPUT.id:
+                        handleTvInput(value);
+                        break;
                       default:
                         break;
                       }
                     });
 }
 
-void handleTvAudio(bool state)
+void handleTvInput(int hexValue)
 {
-  if (state)
+  mode = 5;
+  switch (hexValue)
   {
-
-    mode = 1;
+  case 4:
+    tvinputrepeats = 1;
+    break;
+  case 6:
+    tvinputrepeats = 2;
+    break;
+  case 9:
+    tvinputrepeats = 3;
+    break;
+  case 11:
+    tvinputrepeats = 4;
+    break;
+  case 14:
+    tvinputrepeats = 5;
+    break;
+  default:
+    tvinputrepeats = 1;
   }
-  else
-  {
+  //reset tvinput value to 0;
 
-    mode = 2;
-  }
+  fauxmo.setState(TVINPUT.name, false, 255);
 }
 
 void sendIR()
@@ -136,7 +191,15 @@ void sendIR()
     alexaAudioOn();
     break;
   case 3:
-    irsend.sendNEC(tvPowerCommand, necbits);
+    tvToggle();
+    tvAudioOn();
+    break;
+  case 4:
+    tvToggle();
+    alexaAudioOn();
+    break;
+  case 5:
+    tvInputSelect();
     break;
   default:
     break;
